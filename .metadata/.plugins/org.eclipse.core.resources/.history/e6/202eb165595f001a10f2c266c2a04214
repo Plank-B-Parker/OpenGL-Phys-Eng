@@ -1,0 +1,107 @@
+package Shaders;
+
+import org.lwjgl.opengl.GL20;
+
+import Math.Mat3d;
+import Math.Vect3d;
+import Math.Vect3f;
+
+public class StaticShader extends ShaderProgram {
+	private static final String VERTEX_FILE = "src/Shaders/staticVertexShader"; 
+	private static final String FRAGMENT_FILE = "src/Shaders/staticFragmentShader";
+	
+	private int obj_basis;
+	private int obj_pos;
+	
+	private int cam_basis;
+	private int cam_Pos;
+	private int zp, zs;
+	private int _fov;
+	private int _ar;
+	
+	private int[] lightPos;
+	private int[] lightForward;
+	private int[] lightCol;
+	private int[] lightFOV;
+	
+	public StaticShader() {
+		super(VERTEX_FILE, FRAGMENT_FILE);
+		
+		System.out.println(GL20.GL_MAX_VERTEX_UNIFORM_COMPONENTS);
+		System.out.println(GL20.GL_MAX_VARYING_FLOATS);
+	}
+
+	@Override
+	protected void getAllUniformLocations() {
+		//name of matrix in shader.
+		obj_basis = super.getUniformLocation("objBasis");
+		obj_pos = super.getUniformLocation("objPos");		
+		
+		cam_basis = super.getUniformLocation("camBasis");
+		cam_Pos = super.getUniformLocation("camPos");
+		zp = super.getUniformLocation("zp");
+		zs = super.getUniformLocation("zs");
+		_fov = super.getUniformLocation("_fov");
+		_ar = super.getUniformLocation("_ar");
+		
+//		lightPos = new int[100];
+//		lightForward = new int[100];
+//		lightCol = new int[100];
+//		lightFOV = new int[100];
+//		
+//		for(int i = 0; i < 100; i++) {
+//			lightPos[i] = super.getUniformLocation("lightPos["+i+"]");
+//			lightCol[i] = super.getUniformLocation("lightCol["+i+"]");
+//			lightFOV[i] = super.getUniformLocation("lightFOV["+i+"]");
+//			lightForward[i] = super.getUniformLocation("lightForward["+i+"]");
+//		}
+		
+	}
+	
+	public void loadObject(Vect3d pos, Mat3d matrix) {
+		super.loadMatrix3d(obj_basis, matrix);
+		super.loadVector(obj_pos, pos);
+	}
+	
+	public void loadLights(Vect3d[] pos, Vect3d[] forward, Vect3f[] col, float[] FOV) {
+		for(int i = 0; i < pos.length; i++) {
+			super.loadVector(lightPos[i], pos[i]);
+			super.loadVector(lightForward[i], forward[i]);
+			super.loadVector(lightCol[i], col[i]);
+			super.loadFloat(lightFOV[i], FOV[i]);
+		}
+		if(pos.length<100) {
+			for(int i = pos.length-1; i<100; i++) {
+				super.loadVector(lightPos[i], Vect3d.O);
+				super.loadVector(lightForward[i], Vect3d.O);
+				super.loadVector(lightCol[i], Vect3d.O);
+				super.loadFloat(lightFOV[i], 0);
+			}
+		}
+	}
+	
+	public void loadCamera(Vect3d pos, Mat3d basis, float near, float far, float fov, float ar) {
+		super.loadMatrix3d(cam_basis, basis);
+		super.loadVector(cam_Pos, pos);
+		
+		float zs = (near+far)/(far-near);
+		float zp = 2*near*far/(far - near);
+		
+		super.loadFloat(this.zp, zp);
+		super.loadFloat(this.zs, zs);
+		
+		super.loadFloat(this._ar, ar);
+		super.loadFloat(this._fov, fov);
+		
+	}
+
+	@Override
+	protected void bindAttributes() {
+		super.bindAttribute("Pos", 0);
+		super.bindAttribute("Norm", 1);
+		super.bindAttribute("UV", 2);
+		super.bindAttribute("Col", 3);
+		
+	}
+
+}

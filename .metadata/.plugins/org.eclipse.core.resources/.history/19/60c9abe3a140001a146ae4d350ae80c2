@@ -1,0 +1,344 @@
+package Objects;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL15;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.util.vector.Vector2f;
+import org.newdawn.slick.opengl.Texture;
+import org.newdawn.slick.opengl.TextureLoader;
+
+import Math.Vect2f;
+import Math.Vect3d;
+
+public class Loader {
+	ArrayList<Integer> vaoIDs = new ArrayList<Integer>();
+	ArrayList<Integer> vboIDs = new ArrayList<Integer>();
+	ArrayList<Integer> textureIDs = new ArrayList<Integer>();
+	
+	public Mesh generateMesh(float[] pos, float[] norms, float[] texts, int[] indices) {
+		int vaoID = generateVAO();
+		bindIndicesBuffer(indices);
+		generateVBO(0, 3, pos);
+		generateVBO(1, 3, norms);
+		generateVBO(2, 2, texts);
+		//Color VBO.
+		generateVBO(3, 3, new float[pos.length]);
+		//Check if VBOs can be changed or if are zero if not initialised.
+		
+		unbindVAO();
+		
+		ArrayList<Vect3d> positions = generateVect3dList(pos);
+		ArrayList<Vect3d> normals = generateVect3dList(norms);
+		
+		return new Mesh(positions, normals, generateTris(positions, normals, indices), vaoID, indices.length, this);
+	}
+	public Mesh generateMesh(String fileName) {
+		return loadMeshFromFile(fileName);
+	}
+	
+	public int loadTexture(String fileName) {
+		Texture texture = null;
+		
+		try {
+			texture = TextureLoader.getTexture("PNG", new FileInputStream("res/" + fileName + ".png"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		int textureID = texture.getTextureID();
+		textureIDs.add(textureID);
+		return textureID;
+	}
+	
+	//Changing VBOs.
+	public void changeColors(float[] colors, Mesh m) {
+		int index = 4*vaoIDs.indexOf(m.getVaoID()) + 3;
+		changeVBO(vboIDs.get(index), colors);
+	}
+	public void changePositions(float[] positions, Mesh m) {
+		int index = 4*vaoIDs.indexOf(m.getVaoID());
+		changeVBO(vboIDs.get(index), positions);
+	}
+	public void changeUVs(float[] uvs, Mesh m) {
+		int index = 4*vaoIDs.indexOf(m.getVaoID()) + 2;
+		changeVBO(vboIDs.get(index), uvs);
+	}
+	public void changeNorms(float[] norms, Mesh m) {
+		int index = 4*vaoIDs.indexOf(m.getVaoID()) + 1;
+		changeVBO(vboIDs.get(index), norms);
+	}
+	
+	private void changeVBO(int vboID, float[] data) {
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboID);
+		FloatBuffer vbo = storeInFloatBuffer(data);
+		GL15.glBufferSubData(GL15.GL_ARRAY_BUFFER, 0, vbo);
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+	}
+	
+	
+	public void cleanUp() {
+		for(int vbo: vboIDs) {
+			GL30.glDeleteFramebuffers(vbo);
+		}
+		for(int vao: vaoIDs) {
+			GL30.glDeleteVertexArrays(vao);
+		}
+		for(int texture: textureIDs) {
+			GL11.glDeleteTextures(texture);
+		}
+	}
+	
+	private int generateVAO() {
+		int vaoID = GL30.glGenVertexArrays();
+		vaoIDs.add(vaoID);
+		GL30.glBindVertexArray(vaoID);
+		return vaoID;
+	}
+	
+	private void unbindVAO() {
+		GL30.glBindVertexArray(0);
+	}
+	
+	private void bindIndicesBuffer(int[] indices) {
+		int vboID = GL15.glGenBuffers();
+		vboIDs.add(vboID);
+		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, vboID);
+		IntBuffer vbo = storeInIntBuffer(indices);
+		GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, vbo, GL15.GL_STATIC_DRAW);
+	}
+	
+	private void generateVBO(int attribIndex, int dimension, float[] data) {
+		int vboID = GL15.glGenBuffers();
+		vboIDs.add(vboID);
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboID);
+		FloatBuffer vbo = storeInFloatBuffer(data);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, vbo, GL15.GL_STATIC_DRAW);
+		GL20.glVertexAttribPointer(attribIndex, dimension, GL11.GL_FLOAT, false, 0, 0);
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+	}
+	
+	
+	//Generates data to store for physics.
+	private ArrayList<Vect3d> generateVect3dList(float[] vects){
+		ArrayList<Vect3d> vectList = new ArrayList<Vect3d>();
+		for(int i = 0; i <= vects.length - 4; i += 3) {
+			vectList.add(new Vect3d(vects[i], vects[i+1], vects[i+2]));
+		}
+		return vectList;
+	}
+	
+	private ArrayList<Vector2f> generateVect2fList(float[] vects){
+		ArrayList<Vector2f> vectList = new ArrayList<Vector2f>();
+		for(int i = 0; i <= vects.length - 3; i += 2) {
+			vectList.add(new Vector2f(vects[i], vects[i+1]));
+		}
+		return vectList;
+	}
+	
+	private ArrayList<Triangle> generateTris(ArrayList<Vect3d> pos, ArrayList<Vect3d> norms, int[] indices){
+		ArrayList<Triangle> Tris = new ArrayList<Triangle>();
+		
+		for(int i = 0; i <= indices.length - 4; i += 3) {
+			int index1 = indices[i];
+			int index2 = indices[i+1];
+			int index3 = indices[i+2];
+			Triangle newTri = new Triangle(pos.get(index1), pos.get(index2), pos.get(index3),
+											norms.get(index1), norms.get(index2), norms.get(index3));
+			Tris.add(newTri);
+		}
+		
+		
+		return Tris;
+	}
+	
+	//Storing data in buffers.
+	private FloatBuffer storeInFloatBuffer(float[] data) {
+		FloatBuffer buffer = BufferUtils.createFloatBuffer(data.length);
+		buffer.put(data);
+		buffer.flip();
+		return buffer;
+	}
+	
+	private IntBuffer storeInIntBuffer(int[] data) {
+		IntBuffer buffer = BufferUtils.createIntBuffer(data.length);
+		buffer.put(data);
+		buffer.flip();
+		return buffer;
+	}
+	
+	//TODO: Change method to handle objects without texture and normal info
+	private Mesh loadMeshFromFile(String fileName) {
+		FileReader fr = null;
+		try {
+			fr = new FileReader(new File("res/"+fileName+".obj"));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		BufferedReader reader = new BufferedReader(fr);
+		String line;
+		ArrayList<Vect3d> positions = new ArrayList<Vect3d>();
+		ArrayList<Vect2f> textures = new ArrayList<Vect2f>();
+		ArrayList<Vect3d> normals = new ArrayList<Vect3d>();
+		ArrayList<Integer> indices = new ArrayList<Integer>();
+		ArrayList<Triangle> triangles =  new ArrayList<Triangle>();
+		
+		float[] posArray = null;
+		float[] normsArray = null;
+		float[] texArray = null;
+		int[] iArray = null;
+		
+		try {
+			
+			line = reader.readLine();
+			while(line != null) {
+				String[] currentLine = line.split(" ");
+				if(line.startsWith("v ")) {
+					Vect3d position = new Vect3d(Float.parseFloat(currentLine[1]),
+												Float.parseFloat(currentLine[2]),
+												Float.parseFloat(currentLine[3])
+												);
+					positions.add(position);
+					
+				}else if(line.startsWith("vt ")) {
+					Vect2f texture = new Vect2f(Float.parseFloat(currentLine[1]),
+												Float.parseFloat(currentLine[2])
+												);
+					textures.add(texture);
+					
+				}else if(line.startsWith("vn ")) {
+					Vect3d normal = new Vect3d(Float.parseFloat(currentLine[1]),
+							Float.parseFloat(currentLine[2]),
+							Float.parseFloat(currentLine[3])
+							);
+					normals.add(normal);
+					
+				}else if(line.startsWith("f ")) {
+					
+					break;
+				}	
+				line = reader.readLine();
+			}
+			
+			while(line != null) {
+				if(!line.startsWith("f")) {
+					line = reader.readLine();
+					continue;
+				}
+				
+				String[] currentLine = line.split(" ");
+				String[] v1 = currentLine[1].split("/");
+				String[] v2 = currentLine[2].split("/");
+				String[] v3 = currentLine[3].split("/");
+				
+				indices.add(Integer.parseInt(v1[0]) - 1);
+				indices.add(Integer.parseInt(v1[1]) - 1);
+				indices.add(Integer.parseInt(v1[2]) - 1);
+				
+				indices.add(Integer.parseInt(v2[0]) - 1);
+				indices.add(Integer.parseInt(v2[1]) - 1);
+				indices.add(Integer.parseInt(v2[2]) - 1);
+				
+				indices.add(Integer.parseInt(v3[0]) - 1);
+				indices.add(Integer.parseInt(v3[1]) - 1);
+				indices.add(Integer.parseInt(v3[2]) - 1);
+				
+				triangles.add(generateTri(v1, v2, v3, positions, normals));
+				
+//				processVertex(v1, indices, normals, textures, normsArray, texArray);
+//				processVertex(v2, indices, normals, textures, normsArray, texArray);
+//				processVertex(v3, indices, normals, textures, normsArray, texArray);
+				
+				line = reader.readLine();
+			}
+			
+			reader.close();
+			
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+		
+		for(int i = 0; i <= indices.size() - 6; i += 3) {
+			for(int j = i + 3; j <= indices.size() - 3; j += 3) {
+				if(indices.get(i) == indices.get(j) &&
+				   (indices.get(i+1) == indices.get(j+1) ||
+				   indices.get(i+2) == indices.get(j+2))) {
+					
+					Vect3d pos = positions.get(indices.get(i));
+					positions.add(pos);
+					indices.set(j, positions.lastIndexOf(pos));
+				}
+			}
+		}
+		
+		normsArray = new float[3*positions.size()];
+		texArray = new float[2*positions.size()];		
+		posArray = new float[3*positions.size()];
+		iArray = new int[indices.size()/3];
+		
+		for(int index = 0; index <= indices.size() - 3; index += 3) {
+			int posIndex = indices.get(index);
+			int texIndex = indices.get(index + 1);
+			int normIndex = indices.get(index + 2);
+			
+			Vect2f tex = textures.get(texIndex);
+			Vect3d norm = normals.get(normIndex);
+			
+			texArray[2*posIndex] = tex.x;
+			texArray[2*posIndex + 1] = tex.y;
+			
+			normsArray[3*posIndex] = (float) norm.x;
+			normsArray[3*posIndex + 1] = (float) norm.y;
+			normsArray[3*posIndex + 2] = (float) norm.z;
+			
+			iArray[index/3] = posIndex;
+		}
+		int index = 0;
+		for(Vect3d pos: positions) {
+			posArray[index] = (float) pos.x;
+			posArray[index + 1] = (float) pos.y;
+			posArray[index + 2] = (float) pos.z;
+			index += 3;
+		}
+		
+		int vaoID = generateVAO();
+		bindIndicesBuffer(iArray);
+		generateVBO(0, 3, posArray);
+		generateVBO(1, 3, normsArray);
+		generateVBO(2, 2, texArray);
+		generateVBO(3, 3, new float[posArray.length]);
+		
+		unbindVAO();
+		
+		return new Mesh(positions, normals, triangles, vaoID, indices.size(), this);
+		
+	}
+	
+	private static Triangle generateTri(String[] v1, String[] v2, String[] v3, 
+										List<Vect3d> pos, List<Vect3d> norms) {
+		int pos1 = Integer.parseInt(v1[0]) - 1;
+		int norm1 = Integer.parseInt(v1[2]) - 1;
+		
+		int pos2 = Integer.parseInt(v2[0]) - 1;
+		int norm2 = Integer.parseInt(v2[2]) - 1;
+
+		int pos3 = Integer.parseInt(v3[0]) - 1;
+		int norm3 = Integer.parseInt(v3[2]) - 1;
+		
+		return new Triangle(pos.get(pos1), pos.get(pos2), pos.get(pos3),
+							norms.get(norm1), norms.get(norm2), norms.get(norm3));
+	}
+	
+	
+}

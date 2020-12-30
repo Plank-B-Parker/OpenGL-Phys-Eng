@@ -1,0 +1,28 @@
+package Math;
+
+import java.util.ArrayList;
+
+public class VectPool {
+
+	ArrayList<Vect3d> vect3ds = new ArrayList<>();
+	ArrayList<Integer> inactive = new ArrayList<>();
+	
+	public VectPool() {
+		
+	}
+
+	public Vect3d getVect() {
+		Vect3d vect;
+		if(inactive.size() == 0) {
+			vect = new Vect3d();
+			vect3ds.add(vect);
+		}
+		else {
+			int index = inactive.get(inactive.size()-1);
+			vect = vect3ds.get(index);
+			inactive.remove(index);
+		}
+		return vect;
+	}
+	
+}

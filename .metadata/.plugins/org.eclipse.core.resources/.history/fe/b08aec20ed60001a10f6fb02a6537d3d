@@ -1,0 +1,117 @@
+package Objects;
+
+import Math.Mat3d;
+import Math.Vect3d;
+import Math.math;
+
+public abstract class Object {
+	
+	protected static Loader loader = new Loader();
+	
+	public Vect3d pos;
+	public Mat3d basis;
+	protected double xl = 1, yl = 1, zl = 1;
+	protected Mesh mesh;
+	private static int whiteTexture = loader.loadTexture("white");
+	protected int textID = whiteTexture;
+	
+	public Object() {
+		pos = new Vect3d();
+		basis = new Mat3d();
+	}
+	
+	public Object(Vect3d pos, Mat3d basis) {
+		this.pos = pos;
+		this.basis = basis;
+		
+		xl = basis.c1.lengthSq();
+		yl = basis.c2.lengthSq();
+		zl = basis.c3.lengthSq();
+	}
+
+	public void translate(Vect3d d) {
+		Vect3d.add(pos, pos, d);
+	}
+	
+	public void rotate(Vect3d center, Vect3d normal, double angle) {
+		double cos = Math.cos(angle);
+		double sin = Math.sin(angle);
+		Vect3d.rotate(pos, pos, center, normal, cos, sin);
+		Vect3d.rotate(basis.c1, basis.c1, Vect3d.O, normal, cos, sin);
+		Vect3d.rotate(basis.c2, basis.c2, Vect3d.O, normal, cos, sin);
+		Vect3d.rotate(basis.c3, basis.c3, Vect3d.O, normal, cos, sin);
+	}
+	
+	public void rotate2(Vect3d center, Vect3d normal, double angle) {
+		Vect3d.rotate(pos, pos, center, normal, angle);
+		
+	}
+	
+	public void lookAt(Vect3d direction) {
+		double cos = Vect3d.dot(direction, basis.c3)/zl;
+		Vect3d nsin = new Vect3d();
+		Vect3d.cross(nsin, basis.c3, direction);
+		Vect3d.scale(nsin, nsin, 1.0/zl);
+		double sinSq = nsin.lengthSq();
+		
+		Vect3d x = basis.c1;
+		double dot = Vect3d.dot(x, nsin);
+		Vect3d.scale(x, x, cos);
+		Vect3d.crossIncrement(x, nsin, x, 1.0/cos);
+		Vect3d.increment(x, nsin, (dot)*(1-cos)/sinSq);
+		
+		x = basis.c2;
+		dot = Vect3d.dot(x, nsin);
+		Vect3d.scale(x, x, cos);
+		Vect3d.crossIncrement(x, nsin, x, 1.0/cos);
+		Vect3d.increment(x, nsin, (dot)*(1-cos)/sinSq);
+	}
+	
+	private double tolerance = 0.001;
+	public void orthogonormaliseBasis() {
+		if(Vect3d.dot(basis.c1, basis.c2) > tolerance || Vect3d.dot(basis.c1, basis.c3) > tolerance) {
+			Vect3d.cross(basis.c1, basis.c2, basis.c3);
+		}
+		if(Vect3d.dot(basis.c3, basis.c1) > tolerance || Vect3d.dot(basis.c3, basis.c2) > tolerance) {
+			Vect3d.cross(basis.c3, basis.c1, basis.c2);
+		}
+		
+		
+		if(Math.abs(basis.c1.lengthSq() - xl) > tolerance) {
+			Vect3d.scale(basis.c1, basis.c1, math.invSqrt(basis.c1.lengthSq()/xl));
+		}
+		if(Math.abs(basis.c2.lengthSq() - yl) > tolerance) {
+			Vect3d.scale(basis.c2, basis.c2, math.invSqrt(basis.c2.lengthSq()/yl));
+		}
+		if(Math.abs(basis.c3.lengthSq() - zl) > tolerance) {
+			Vect3d.scale(basis.c3, basis.c3, math.invSqrt(basis.c3.lengthSq()/zl));
+		}
+	}
+
+	public Mat3d getBasis() {
+		return basis;
+	}
+
+	public void setBasis(Mat3d basis) {
+		this.basis = basis;
+		
+		xl = basis.c1.lengthSq();
+		yl = basis.c2.lengthSq();
+		zl = basis.c3.lengthSq();
+	}
+
+	public Mesh getMesh() {
+		return mesh;
+	}
+	
+	public int getTextureID() {
+		return textID;
+	}
+	public void setTexture(int textureID) {
+		textID = textureID;
+	}
+	
+	public static void setLoader(Loader loader) {
+		Object.loader = loader;
+	}
+}

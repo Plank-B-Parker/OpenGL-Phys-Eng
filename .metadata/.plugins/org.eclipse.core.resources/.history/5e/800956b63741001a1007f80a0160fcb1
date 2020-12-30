@@ -1,0 +1,68 @@
+package Objects;
+
+import java.util.ArrayList;
+
+import Math.Vect3d;
+
+public class ObjectHandler {
+
+	private ArrayList<Object> objects = new ArrayList<>();
+	private Loader loader = new Loader();
+	
+	
+	public ObjectHandler() {
+		Object.setLoader(loader);
+	}
+	
+	public void initObjects() {
+		Object box = new Box();
+		addObject(box);
+	}
+	
+	public void addObject(Object o) {
+		objects.add(o);
+	}
+	
+	//TODO: test this method.
+	public void removeObject(Object o) {
+		objects.remove(o);
+	}
+	
+	public Object getObject(int index) {
+		return objects.get(index);
+	}
+	
+	public void cleanUp() {
+		loader.cleanUp();
+		objects.clear();
+	}
+	
+	double t = 0;
+	
+	
+	double a = 0.95;
+	double r = Math.sqrt(1 - a*a);
+	double w1 = 2*Math.PI/0.5;
+	double w2 = 0*2*Math.PI/100;
+	public void updateObjects(double dt) {
+		if(1/dt < 50) {
+			return;
+		}
+		for(Object obj: objects) {
+			Vect3d normal = new Vect3d(r*Math.sin(w2*t), a, r*Math.cos(w2*t));
+			if(normal.lengthSq() != 1) {
+				//System.out.println("hello");
+				normal.normalize();
+			}
+			obj.rotate(Vect3d.O, normal, w1*dt);
+			
+			
+			obj.correctBasis();
+			 System.out.println(obj.basis.c1.lengthSq());
+			 System.out.println(obj.basis.c2.lengthSq());
+			 System.out.println(obj.basis.c3.lengthSq());
+		}
+		t += dt;
+	}
+
+}

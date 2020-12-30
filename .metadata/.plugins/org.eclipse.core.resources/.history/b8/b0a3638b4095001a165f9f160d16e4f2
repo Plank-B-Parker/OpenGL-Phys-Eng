@@ -1,0 +1,5 @@
+package Physics;
+
+public abstract class PhysicsAttrib {
+
+}

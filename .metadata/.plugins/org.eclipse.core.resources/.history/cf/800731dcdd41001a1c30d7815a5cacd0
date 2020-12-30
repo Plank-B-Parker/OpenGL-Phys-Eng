@@ -1,0 +1,89 @@
+package Objects;
+
+import Math.Mat3d;
+import Math.Vect3d;
+import Math.math;
+
+public abstract class Object {
+
+	public Vect3d pos;
+	public Mat3d basis;
+	protected double xl = 1, yl = 1, zl = 1;
+	protected Mesh mesh;
+	protected int textID = loader.loadTexture("checkerboard");
+	
+	protected static Loader loader;
+	
+	public Object() {
+		pos = new Vect3d();
+		basis = new Mat3d();
+	}
+	
+	public Object(Vect3d pos, Mat3d basis) {
+		this.pos = pos;
+		this.basis = basis;
+		
+		xl = basis.c1.lengthSq();
+		yl = basis.c2.lengthSq();
+		zl = basis.c3.lengthSq();
+	}
+
+	public void translate(Vect3d d) {
+		Vect3d.add(pos, pos, d);
+	}
+	
+	public void rotate(Vect3d center, Vect3d normal, double angle) {
+		Vect3d.rotate(pos, pos, center, normal, angle);
+		Vect3d.rotate(basis.c1, basis.c1, Vect3d.O, normal, angle);
+		Vect3d.rotate(basis.c2, basis.c2, Vect3d.O, normal, angle);
+		Vect3d.rotate(basis.c3, basis.c3, Vect3d.O, normal, angle);
+	}
+	
+	private double tolerance = 0.001;
+	public void correctBasis() {
+//		if(Vect3d.dot(basis.c1, basis.c2) > tolerance || Vect3d.dot(basis.c1, basis.c3) > tolerance) {
+//			Vect3d.cross(basis.c1, basis.c2, basis.c3);
+//		}
+//		if(Vect3d.dot(basis.c3, basis.c1) > tolerance || Vect3d.dot(basis.c3, basis.c2) > tolerance) {
+//			Vect3d.cross(basis.c3, basis.c1, basis.c2);
+//		}
+		
+		
+		if(Math.abs(basis.c1.lengthSq() - xl) > tolerance) {
+			Vect3d.scale(basis.c1, basis.c1, math.invSqrt(basis.c1.lengthSq()/xl));
+		}
+		if(Math.abs(basis.c2.lengthSq() - yl) > tolerance) {
+			Vect3d.scale(basis.c2, basis.c2, math.invSqrt(basis.c2.lengthSq()/yl));
+		}
+		if(Math.abs(basis.c3.lengthSq() - zl) > tolerance) {
+			Vect3d.scale(basis.c3, basis.c3, math.invSqrt(basis.c3.lengthSq()/zl));
+		}
+	}
+
+	public Mat3d getBasis() {
+		return basis;
+	}
+
+	public void setBasis(Mat3d basis) {
+		this.basis = basis;
+		
+		xl = basis.c1.lengthSq();
+		yl = basis.c2.lengthSq();
+		zl = basis.c3.lengthSq();
+	}
+
+	public Mesh getMesh() {
+		return mesh;
+	}
+	
+	public int getTextureID() {
+		return textID;
+	}
+	public void setTexture(int textureID) {
+		textID = textureID;
+	}
+	
+	public static void setLoader(Loader loader) {
+		Object.loader = loader;
+	}
+}

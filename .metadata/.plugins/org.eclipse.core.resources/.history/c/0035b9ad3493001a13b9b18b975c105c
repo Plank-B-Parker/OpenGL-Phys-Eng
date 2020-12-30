@@ -1,0 +1,115 @@
+package Physics;
+
+import Math.Mat3d;
+import Math.Vect3d;
+import Objects.Mesh;
+import Objects.Triangle;
+//TODO: Find a way to generalise this class to not use meshes.
+public class Physics {
+	
+	public Mesh mesh;
+	
+	public double mass;
+	public double density;
+	public Vect3d pos;
+	public Vect3d vel = new Vect3d();
+	public Vect3d acc = new Vect3d();
+	
+	//Spinning Tingz.
+	private Mat3d B;
+	private Mat3d _B;
+	private Mat3d dB = new Mat3d();
+	private Mat3d d_B = new Mat3d();
+	
+	private Mat3d I = new Mat3d(), _I = new Mat3d(), Ib = new Mat3d(), _Ib = new Mat3d(), dIb = new Mat3d();
+	private Vect3d w = new Vect3d();
+	private Vect3d dw = new Vect3d();
+	private Vect3d torque = new Vect3d();
+	
+	private final Vect3d v = new Vect3d();
+	
+	final private Mat3d tempM1 = new Mat3d(), tempM2 = new Mat3d();
+	final private Vect3d tempV1 = new Vect3d(), tempV2 = new Vect3d();
+	
+	//Uniform fields.
+	private static Vect3d gravField = new Vect3d();
+	private static Vect3d elecField = new Vect3d();
+	
+	private static double G;
+	private static double E;
+	
+	public Physics(Mesh mesh, double mass, Vect3d pos, Mat3d basis) {
+		this.mesh = mesh;
+		this.mass = mass;
+		density = mass/mesh.volume;
+		this.pos = pos;
+		B = basis;
+		B.inverse(_B);
+		Mat3d.scale(I, mesh.momentOfInertiaDensity, mass);
+		I.inverse(_I);
+		dB.c1.x = 0;
+		dB.c2.y = 0;
+		dB.c3.z = 0;
+		
+		d_B.c1.x = 0;
+		d_B.c2.y = 0;
+		d_B.c3.z = 0;
+	}
+	public void integrateSimpEuler(double dt) {
+		computeForcesTorques();
+		Vect3d.increment(vel, acc, dt);
+		Vect3d.increment(pos, acc, dt);
+		
+		//Ib = BI_B, change of basis.
+		Mat3d.mult(Ib, I, _B);
+		Mat3d.mult(Ib, B, Ib);
+		
+		//_Ib = _B_IB
+		Mat3d.mult(_Ib, _I, B);
+		Mat3d.mult(_Ib, _B, _Ib);
+		
+		//d(BI_B)/dt = (dB/dt)I_B + BI(d_B/dt)
+		Mat3d dBI_B = tempM1;
+		Mat3d BId_B = tempM2;
+		
+		Mat3d.mult(dBI_B, I, _B);
+		Mat3d.mult(dBI_B, dB, dBI_B);
+		
+		Mat3d.mult(BId_B, I, d_B);
+		Mat3d.mult(BId_B, B, BId_B);
+		
+		Mat3d.add(dIb, dBI_B, BId_B);
+		
+		//dw/dt = _Ib(T - (dIb/dt)w)
+		Mat3d.mult(dw, dIb, w);
+		Vect3d.sub(dw, torque, dw);
+		Mat3d.mult(dw, _Ib, dw);
+		
+		Vect3d.increment(w, dw, dt);
+		rotateBasis(dt);
+		
+		//Work out dB/dt and d_B/dt.
+		Mat3d.crossTransform(dB, w, B);
+		
+		Vect3d.scale(tempV1, w, -1);
+		Mat3d.crossTransform(d_B, tempV1, _B);
+		
+	}
+	
+	private void rotateBasis(double dt) {
+		//Small angle sin(wdt) =~ wdt?
+		double angle = Math.sqrt(w.lengthSq());
+		Vect3d norm = tempV1;
+		Vect3d.scale(norm, w, 1d/angle);
+		B.rotate(norm, angle);
+		//Rotate inverse the opposite way.
+		Vect3d.scale(norm, norm, -1);
+		_B.rotate(norm, angle);
+	}
+	
+	public void computeForcesTorques() {
+		acc.set(0,0,0);
+		torque.set(0,0,0);
+	}
+	
+}

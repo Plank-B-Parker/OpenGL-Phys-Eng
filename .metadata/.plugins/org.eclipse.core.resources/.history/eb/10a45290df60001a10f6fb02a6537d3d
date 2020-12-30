@@ -1,0 +1,68 @@
+package Graphics;
+
+import Math.Mat3d;
+import Math.Vect3d;
+
+import Objects.Object;
+
+public class Camera extends Object{
+	
+	private float FOV;
+	private float fovAngle;
+	
+	private float zNear = 0.1f;
+	private float zFar = 100f;
+	
+	
+	public Camera(float fovAngle) {
+		super(new Vect3d(0,0,3), new Mat3d());
+		Vect3d.scale(super.basis.c3, super.basis.c3, -1);
+		
+		this.fovAngle = fovAngle;
+		FOV = (float) (1/Math.tan(fovAngle/2));
+	}
+	
+	public Camera(Vect3d pos, float fovAngle) {
+		super(pos, new Mat3d());
+		Vect3d.scale(super.basis.c3, super.basis.c3, -1);
+		
+		this.fovAngle = fovAngle;
+		FOV = (float) (1/Math.tan(fovAngle/2));
+	}
+	public Camera(Vect3d pos, Mat3d basis, float fovAngle) {
+		super(pos, basis);
+		
+		this.fovAngle = fovAngle;
+		FOV = (float) (1/Math.tan(fovAngle/2));
+	}
+	
+	public float getFOV() {
+		return FOV;
+	}
+
+	public float getFOVAngle() {
+		return fovAngle;
+	}
+	
+	public void setFOV(float fovAngle) {
+		this.fovAngle = fovAngle;
+		FOV = (float) (1/Math.tan(fovAngle/2));
+	}
+
+	public float getzNear() {
+		return zNear;
+	}
+
+	public void setzNear(float zNear) {
+		this.zNear = zNear;
+	}
+
+	public float getzFar() {
+		return zFar;
+	}
+
+	public void setzFar(float zFar) {
+		this.zFar = zFar;
+	}
+
+}

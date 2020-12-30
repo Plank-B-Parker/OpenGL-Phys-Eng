@@ -1,0 +1,235 @@
+package Graphics;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL15;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GL31;
+
+import Math.Mat3d;
+import Math.Vect3d;
+import Math.Vect3f;
+import Objects.Mesh;
+import Objects.Object;
+
+public class Renderer {
+
+	private Camera Camera = new Camera((float)Math.PI/2);
+	private int cameraUBOID;
+	
+	private ArrayList<lightSource> lights = new ArrayList<>();
+	private int lightsUBOID;
+	private int max_num_lights = 28;
+	
+	private objectRenderer objRenderer = new objectRenderer();
+	
+	private Map<Mesh, HashMap<Integer, List<Object>>> meshes = new HashMap<>();
+	
+	public Renderer() {
+		genCamera();
+		genLights();
+	}
+	
+	public void prepare() {
+		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);
+		GL11.glClearColor(0,0,0,0);
+	}
+	
+	public void renderScene() {
+		renderObjects();
+	}
+	
+	private void renderObjects() {
+		objRenderer.shader.start();
+		loadCamera();
+		//objRenderer.loadLightsSources(lights);
+		for(Entry<Mesh, HashMap<Integer, List<Object>>> entry: meshes.entrySet()) {
+			objRenderer.renderObject(entry.getKey(), entry.getValue());
+		}
+		objRenderer.shader.stop();
+	}
+	
+	//Perhaps make a genUBO method.
+	private void genCamera() {
+		cameraUBOID = GL15.glGenBuffers();
+		GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, cameraUBOID);
+		ByteBuffer bytes = BufferUtils.createByteBuffer(5*16);
+		GL15.glBufferData(GL31.GL_UNIFORM_BUFFER, bytes, GL15.GL_STATIC_DRAW);
+		GL30.glBindBufferBase(GL31.GL_UNIFORM_BUFFER, 0, cameraUBOID);
+		GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, 0);
+		
+		int cameraBlockIndex = GL31.glGetUniformBlockIndex(objRenderer.shader.programID, "Camera");
+		GL31.glUniformBlockBinding(objRenderer.shader.programID, cameraBlockIndex, 0);
+	}
+	
+	private void  genLights() {
+		lightsUBOID = GL15.glGenBuffers();
+		GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, lightsUBOID);
+		ByteBuffer bytes = BufferUtils.createByteBuffer(4*16*max_num_lights);
+		GL15.glBufferData(GL31.GL_UNIFORM_BUFFER, bytes, GL15.GL_STATIC_DRAW);
+		GL30.glBindBufferBase(GL31.GL_UNIFORM_BUFFER, 1, lightsUBOID);
+		GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, 0);
+		
+		int lightsBlockIndex = GL31.glGetUniformBlockIndex(objRenderer.shader.programID, "Lights");
+		GL31.glUniformBlockBinding(objRenderer.shader.programID, lightsBlockIndex, 1);
+	}
+	
+	private void loadCamera()
+	{
+		GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, cameraUBOID);
+		ByteBuffer mappedBuffer = GL15.glMapBuffer(GL31.GL_UNIFORM_BUFFER, GL15.GL_READ_WRITE, 5*16, null);
+		
+		///
+		storeVect3inMappedBuffer(Camera.pos, mappedBuffer);
+		storeMat3inMappedBuffer(Camera.basis, mappedBuffer);
+		
+		float near = Camera.getzNear();
+		float far = Camera.getzFar();
+		
+		float zs = (near+far)/(far-near);
+		float zp = 2*near*far/(far - near);
+		
+		mappedBuffer.putFloat(zp);
+		mappedBuffer.putFloat(zs);
+		mappedBuffer.putFloat(Camera.getFOV());
+		mappedBuffer.putFloat(DisplayManager.getAspectRatio());
+		///
+		
+		GL15.glUnmapBuffer(GL31.GL_UNIFORM_BUFFER);
+		GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, 0);
+	}
+	
+	private void loadLights() {
+		GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, lightsUBOID);
+		ByteBuffer mappedBuffer = GL15.glMapBuffer(GL31.GL_UNIFORM_BUFFER, GL15.GL_READ_WRITE, null);
+		
+		///
+		int i = 0;
+		for(lightSource light: lights) {
+			storeVect3inMappedBuffer(light.pos, 16*i, mappedBuffer);
+			storeVect3inMappedBuffer(light.basis.c3, 16*(i + max_num_lights), mappedBuffer);
+			storeVect3inMappedBuffer(light.basis.c3, 16*(i + 2*max_num_lights), mappedBuffer);
+			mappedBuffer.putFloat(16*(i + 3*max_num_lights),light.FOV);
+			mappedBuffer.putFloat(0.0f);
+			mappedBuffer.putFloat(0.0f);
+			mappedBuffer.putFloat(0.0f);
+			i++;
+		}
+		///
+		
+		GL15.glUnmapBuffer(GL31.GL_UNIFORM_BUFFER);
+		GL15.glBindBuffer(GL31.GL_UNIFORM_BUFFER, 0);
+	}
+	
+	private void storeMat3inMappedBuffer(Mat3d m, ByteBuffer buffer) {
+		buffer.putFloat((float) m.c1.x);
+		buffer.putFloat((float) m.c1.y);
+		buffer.putFloat((float) m.c1.z);
+		buffer.putFloat(0.0f);
+		
+		buffer.putFloat((float) m.c2.x);
+		buffer.putFloat((float) m.c2.y);
+		buffer.putFloat((float) m.c2.z);
+		buffer.putFloat(0.0f);
+		
+		buffer.putFloat((float) m.c3.x);
+		buffer.putFloat((float) m.c3.y);
+		buffer.putFloat((float) m.c3.z);
+		buffer.putFloat(0.0f);
+	}
+	
+	private void storeVect3inMappedBuffer(Vect3d v, ByteBuffer buffer) {
+		buffer.putFloat((float)v.x);
+		buffer.putFloat((float)v.y);
+		buffer.putFloat((float)v.z);
+		buffer.putFloat(0.0f);
+	}
+	
+	private void storeVect3inMappedBuffer(Vect3d v, int index, ByteBuffer buffer) {
+		buffer.putFloat(index, (float)v.x);
+		buffer.putFloat(index, (float)v.y);
+		buffer.putFloat(index, (float)v.z);
+		buffer.putFloat(0.0f);
+	}
+	
+	private void storeVect3inMappedBuffer(Vect3f v, ByteBuffer buffer) {
+		buffer.putFloat(v.x);
+		buffer.putFloat(v.y);
+		buffer.putFloat(v.z);
+		buffer.putFloat(0.0f);
+	}
+	
+	private void storeVect3inMappedBuffer(Vect3f v, int index, ByteBuffer buffer) {
+		buffer.putFloat(index, v.x);
+		buffer.putFloat(index, v.y);
+		buffer.putFloat(index, v.z);
+		buffer.putFloat(0.0f);
+	}
+	
+	public void addToScene(Object o) {
+		HashMap<Integer, List<Object>> map;
+		List<Object> list;
+		
+		if(!meshes.containsKey(o.getMesh())) {
+			map = new HashMap<>();
+			list = new ArrayList<>();
+			list.add(o);
+			map.put(o.getTextureID(), list);
+			meshes.put(o.getMesh(), map);
+			return;
+		}
+		
+		map = meshes.get(o.getMesh());
+		
+		if(map.containsKey(o.getTextureID())) {
+			list = map.get(o.getTextureID());
+		}
+		else {
+			list = new ArrayList<>();
+			map.put(o.getTextureID(), list);
+		}
+		list.add(o);
+	}
+	
+	/**Returns false if max number of light sources reached.
+	 * Returns true otherwise.
+	 */
+	public boolean addToScene(lightSource L) {
+		if(lights.size() >= 100) {
+			return false;
+		}
+		lights.add(L);
+		return true;
+	}
+	
+	public void addToScene(Camera C) {
+		Camera = C;
+	}
+	
+	
+	public void removeFromScene(Object o) {
+		HashMap<Integer, List<Object>> map = meshes.get(o.getMesh());
+		List<Object> list = map.get(o.getTextureID());
+		list.remove(o);
+	}
+	
+	public void removeFromScene(lightSource L) {
+		lights.remove(L);
+	}
+	
+	public void removeFromScene(Camera C) {
+		Camera = new Camera((float)Math.PI/2);
+	}
+	
+	public void cleanUp() {
+		objRenderer.shader.cleanUp();
+	}
+	
+}

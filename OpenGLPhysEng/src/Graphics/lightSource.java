@@ -1,0 +1,43 @@
+package Graphics;
+
+import Math.Mat3d;
+import Math.Vect3d;
+import Math.Vect3f;
+import Objects.Object;
+
+public class lightSource extends Object{
+
+	public Vect3f color;
+	//-1 FOV corresponds to directional orthographic light source.
+	//0 FOV corresponds to unidirectional point light source.
+	public float FOV;
+	
+	public lightSource(Vect3f col, float fovAngl) {
+		super(new Vect3d(0,0,100), new Mat3d(), new Mat3d());
+		super.rotate(pos, Vect3d.j, Math.PI);
+		color = col;
+		FOV = (float) Math.tan(fovAngl/2);
+		if(fovAngl < 0)
+			FOV = -1;
+	}
+	
+	public lightSource(Vect3d pos, Vect3f col, float fovAngl) {
+		super(pos, new Mat3d(), new Mat3d());
+		color = col;
+		FOV = (float) Math.tan(fovAngl/2);
+		if(fovAngl < 0)
+			FOV = -1;
+		
+	}
+	
+	public lightSource(Vect3d pos, Vect3d direction, Vect3f col, float fovAngl) {
+		super(pos, new Mat3d(), new Mat3d());
+		super.lookAt(direction);
+		color = col;
+		FOV = (float) Math.tan(fovAngl/2);
+		if(fovAngl < 0)
+			FOV = -1;
+		
+	}
+
+}

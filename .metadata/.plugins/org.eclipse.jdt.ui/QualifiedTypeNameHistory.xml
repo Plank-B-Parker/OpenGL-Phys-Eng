@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+<fullyQualifiedTypeName name="Shaders.ShaderProgram"/>
+<fullyQualifiedTypeName name="Shaders.StaticShader"/>
+<fullyQualifiedTypeName name="java.util.ArrayList"/>
+<fullyQualifiedTypeName name="Graphics.objectRenderer"/>
+<fullyQualifiedTypeName name="Math.math"/>
+<fullyQualifiedTypeName name="java.util.Stack"/>
+<fullyQualifiedTypeName name="Graphics.lightSource"/>
+<fullyQualifiedTypeName name="Math.Vect3f"/>
+<fullyQualifiedTypeName name="org.lwjgl.opengl.GL20"/>
+<fullyQualifiedTypeName name="org.lwjgl.opengl.GL30"/>
+<fullyQualifiedTypeName name="org.lwjgl.BufferUtils"/>
+<fullyQualifiedTypeName name="org.lwjgl.opengl.GL15"/>
+<fullyQualifiedTypeName name="Math.Mat3d"/>
+<fullyQualifiedTypeName name="org.lwjgl.opengl.GL41"/>
+<fullyQualifiedTypeName name="java.awt.List"/>
+<fullyQualifiedTypeName name="java.util.List"/>
+<fullyQualifiedTypeName name="Math.Quaternion"/>
+</qualifiedTypeNameHistroy>
