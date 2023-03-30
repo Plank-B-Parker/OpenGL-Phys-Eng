@@ -1,6 +1,0 @@
-INDEX VERSION 1.131+C:\Users\Bat Spider\Dropbox\OpenGL-Phys-Eng\.metadata\.plugins\org.eclipse.jdt.core
-1452155893.index
-1549616509.index
-3467174734.index
-1248545562.index
-3796268591.index

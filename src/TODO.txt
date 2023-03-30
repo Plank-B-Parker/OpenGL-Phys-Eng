@@ -1,0 +1,42 @@
+TODO:
+
+Over all:
+    Minimise number of classes.
+
+Physics:
+    Add basic drag and air resistance.
+    Add collisions.
+    Add constraints.
+    Add fields
+        Add fluids.
+        Add electro-magnetic fields
+
+Go through rendering pipeline:
+    Get ride of stuff like "G11." using static imports and do the same with math classes.
+    Make Rendering easy to follow, avoid inheritance where you can, follow physics class example.
+    Add the other textures, normals and height maps and what ever.
+    Add more functionality by being able to add colour to objects.
+    Make it real easy to draw stuff to the screen, and print text on the screen.
+    Be able to have other window or something.
+
+Go through object classes:
+    Make it readable and call all the methods by easy names.
+    Make it more intuitive.
+    Figure out why you even have an object handler class.
+    Do we even need a loader class(probably, make it nicer if you can).
+
+Input:
+    Just add some controls already.
+
+Make code more Java friendly:
+    Copy constructors.
+    Chill out with the VecPool stuff?
+    I donno, maybe just code this in C++ or C#? Just saying...
+
+Logger:
+    Give more features and render on screen.
+
+Have analytical shapes:
+    They dont have to take a path for mesh. Mesh is generated.
+    Moment of inertia and volume analytically calculated.
+
