@@ -1,4 +1,6 @@
 
+.vscode
+
 # Compiled class file
 *.class
 
@@ -12,7 +14,7 @@
 .mtj.tmp/
 
 # Package Files #
-*.jar
+#*.jar
 *.war
 *.nar
 *.ear
